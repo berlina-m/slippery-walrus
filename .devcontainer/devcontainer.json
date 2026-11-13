@@ -1,0 +1,8 @@
+
+{
+  "name": "SplitSmart Development Environment",
+  "build": {
+    "context": "..",
+    "dockerfile": "Dockerfile"
+  }
+}
