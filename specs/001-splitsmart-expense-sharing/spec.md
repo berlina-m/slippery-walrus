@@ -1,406 +1,235 @@
 # Feature Specification: SplitSmart Expense Sharing
 
-**Feature Branch**: `001-splitsmart-expense-sharing`
+**Feature Branch**: `not created (no before_specify hook configured)`
 
-**Created**: 2026-11-05
+**Created**: 2026-10-29
 
 **Status**: Draft
 
-**Input**: User description: "Read UserRequirement.md in this workspace as the authoritative customer requirements. Write a testable SplitSmart feature specification: actors, user scenarios, functional and non-functional requirements, acceptance criteria, requirement IDs (FR-001, etc.), and open questions. Preserve all original customer features in the requirements inventory; label the Java Swing MVP subset separately. Do not write Java code. Do not edit UserRequirement.md."
+**Input**: Authoritative customer requirements in `UserRequirement.md`; create a testable SplitSmart specification, preserve the complete customer feature set, and distinguish it from the Java Swing MVP implementation decisions.
 
 ## Clarifications
 
-### Session 2026-11-05
+### Session 2026-10-29
 
-- Q: Should an expense record identify who paid separately from the people sharing its cost? → A: Record one payer separately from participants; the payer may or may not be a participant.
-- Q: Must everyone included in an expense be an active member of that group when the expense is submitted? → A: Only active group members may be included as participants.
-- Q: When an expense cannot be divided into equal whole cents, how should the leftover cent or cents be assigned? → A: Distribute leftover cents one at a time in the expense’s participant order.
-- Q: Which authentication method must users use to create accounts and sign in? → A: Email address and password, with a password recovery process.
-- Q: What should happen if a recorded payment is greater than the payer’s outstanding balance to the recipient? → A: Reject any payment above the current outstanding balance.
+- Q: Can the person who pays an expense be different from the people sharing it, and how should that affect their balance? (FR-004, FR-010) → A: The payer may or may not be a participant. Credit the payer for the full amount paid, then offset their own allocation if they participated.
+- Q: How should account sign-in and group membership be controlled? (FR-001–FR-003) → A: People sign in with a verified email address and password; invitees must accept group invitations; removing a member revokes their access while preserving their historical attribution.
+- Q: What rules should validate expense amounts and percentage splits, and how should fractional minor units be assigned? (FR-005, NFR-002) → A: Amounts must be positive and use valid currency precision; percentages must be within 0–100 and total exactly 100%; allocate fractional minor units by largest remainder, breaking ties by stable account ID.
+- Q: When should expense notifications be sent, and which channels should SplitSmart use? (FR-009) → A: Send in-app notices to other active group members when an expense is submitted, and send an in-app decision notice to the submitter when it is approved or rejected.
+- Q: When a member records a payment, when should it reduce the displayed balance? (FR-011) → A: Record the payment as pending until the payee confirms receipt; only confirmed payments reduce the balance, and rejected payments leave it unchanged. Partial payments are allowed.
 
 ## User Scenarios & Testing *(mandatory)*
 
-### Actors
+### User Story 1 - Create an account and group (Priority: P1)
 
-- **Account holder**: A person who signs in to access their expenses, group memberships,
-  balances, payments, and reports.
-- **Group member**: An account holder who participates in shared expenses and receives
-  relevant group expense notifications.
-- **Group organizer**: A group member who creates or manages a group and configures its
-  expense approval process.
-- **Expense submitter**: A group member who records an expense and identifies the people
-  and shares involved.
-- **Expense reviewer**: A group member authorized by the group approval process to review
-  submitted expenses.
+A person creates an account, joins or creates a group, and sees the group members and shared activity relevant to them.
 
-An account holder may hold several of these roles. The customer has not specified separate
-account types.
+**Why this priority**: Expense sharing requires identifiable participants and a shared context before expenses can be attributed.
 
-### User Story 1 - Record and approve a shared expense (Priority: P1)
-
-A group member records an expense with its amount, date, description, payer, split method,
-participants, and optional receipt. The payer is recorded separately from the participants
-and may or may not be included among them. The group’s reviewer or reviewers can approve or
-reject it. Only approved expenses affect balances.
-
-**Why this priority**: Recording and validating shared obligations is the foundation for
-useful balance tracking.
-
-**Independent Test**: Create a group with test members, submit an expense, review it, and
-verify that its status and resulting balances match the review decision.
+**Independent Test**: Create two accounts, create a group with one account, add the second, and verify that both can access the group while an unrelated account cannot.
 
 **Acceptance Scenarios**:
 
-1. **Given** a signed-in group member and an active group, **When** they submit an expense
-   with a payer, valid details, and participant shares, **Then** the payer is recorded
-   separately from the participants, the expense is saved as pending review, and the
-   group members receive an expense notification.
-2. **Given** a pending expense and an authorized reviewer, **When** the reviewer approves
-   it, **Then** it becomes approved and its shares are included in the affected members’
-   balances exactly once.
-3. **Given** a pending expense and an authorized reviewer, **When** the reviewer rejects
-   it, **Then** it is marked rejected, its rejection is visible to the submitter, and it
-   does not change balances.
-4. **Given** an expense with an equal split, **When** it is approved, **Then** the expense
-   is allocated equally among its selected participants, and any leftover cents are
-   assigned one at a time in the participant order recorded on the expense.
-5. **Given** an expense with a percentage split, **When** it is submitted, **Then** the
-   participant percentages total 100% and the corresponding shares total the expense
-   amount after currency rounding.
+1. **AC-001** **Given** a person without an account, **When** they register with a valid email address and password and verify the email address, **Then** they can sign in and see only information they are authorized to access.
+2. **AC-002** **Given** a signed-in person and an invitee, **When** the person invites them to a group and the invitee accepts, **Then** both people appear as active members and can access that group's shared records.
+3. **AC-003** **Given** a person who is not a group member, **When** they attempt to view that group's expenses or balances, **Then** access is denied.
+4. **AC-026** **Given** a member is removed from a group, **When** they attempt to access its records, **Then** access is denied while their attribution on historical expenses and payments remains intact for authorized members.
 
----
+### User Story 2 - Submit a shared expense (Priority: P1)
 
-### User Story 2 - Manage an account and groups (Priority: P1)
+A group member records an expense, identifies who paid and who participated, chooses an equal or percentage split, and may attach a receipt image.
 
-A person creates or uses their own account, signs in, and creates or manages groups for
-shared activities. Group members can access only information they are permitted to see.
+**Why this priority**: Capturing the amount and participants is the source of the group's balance calculations.
 
-**Why this priority**: Accounts and groups establish the people and boundaries needed to
-record shared expenses safely.
-
-**Independent Test**: Create two accounts and a group, add members, sign in as each account,
-and verify that group access and personal information are limited to the appropriate user.
+**Independent Test**: Submit an expense with multiple participants under each split method and verify the submitted details and allocations before approval.
 
 **Acceptance Scenarios**:
 
-1. **Given** a person without an account, **When** they register with a valid email address
-   and password and then sign in, **Then** they can access their own expense and balance
-   information; a user who cannot sign in can start password recovery.
-2. **Given** a group organizer, **When** they create a group and add or remove members,
-   **Then** the group membership reflects each completed action, and only active members
-   can be selected as expense participants.
-3. **Given** an account that is not a member of a group, **When** it requests that group’s
-   private expenses or balances, **Then** access is denied and no private data is shown.
+1. **AC-004** **Given** a group member and an active group, **When** they submit an expense with a payer, amount, date, description, participants, and equal split, **Then** the expense is saved for review with equal allocations whose total matches the expense amount.
+2. **AC-005** **Given** a group member submitting an expense, **When** they provide valid participant percentages totaling 100%, **Then** the expense is saved with each participant's percentage allocation.
+3. **AC-006** **Given** an expense with an optional receipt image, **When** the expense is submitted, **Then** the image is associated with that expense and visible only to authorized users.
+4. **AC-007** **Given** an expense with missing required information or percentages not totaling 100%, **When** it is submitted, **Then** the system identifies the invalid fields and does not submit it for approval.
+5. **AC-024** **Given** an approved expense whose payer is not a participant, **When** balances are calculated, **Then** the payer is credited for the amount paid and participants owe their allocated shares to the payer.
+6. **AC-025** **Given** an approved expense whose payer is also a participant, **When** balances are calculated, **Then** the payer's own allocation offsets their credit for the amount paid.
+7. **AC-027** **Given** an expense with a zero or negative amount, an amount exceeding the currency's permitted precision, or a percentage outside 0–100%, **When** it is submitted, **Then** the system rejects it and identifies the invalid value.
+8. **AC-028** **Given** an equal or percentage split whose exact shares include fractional minor units, **When** allocations are calculated, **Then** the largest-remainder rule assigns the remaining minor units and resolves ties by stable account ID so allocations equal the expense total.
 
----
+### User Story 3 - Review and approve an expense (Priority: P1)
 
-### User Story 3 - Review balances and settle up (Priority: P1)
+An authorized group reviewer reviews a submitted expense and approves or rejects it before it changes balances.
 
-A group member sees the amount they owe to or are owed by each other member, records a
-payment, and sees the updated outstanding balances.
+**Why this priority**: The customer requires review before an expense is accepted into the balance record.
 
-**Why this priority**: Users need to understand and settle obligations produced by approved
-expenses.
-
-**Independent Test**: Approve an expense between test members, record a payment between
-them, and compare the displayed outstanding balances with the expected amounts.
+**Independent Test**: Submit one expense, inspect balances while it is pending, then approve it and verify that the approved expense affects balances; repeat with a rejected expense.
 
 **Acceptance Scenarios**:
 
-1. **Given** approved expenses involving multiple members, **When** a member views their
-   balances, **Then** the system shows the net amount owed to or by each relevant member.
-2. **Given** an outstanding balance, **When** a payer records a valid payment to the
-   recipient, **Then** the payment is recorded and the outstanding balance is reduced by
-   that amount without changing the historical expense.
-3. **Given** a payment amount greater than the payer’s outstanding amount to the recipient,
-   **When** the payer attempts to record it, **Then** the system rejects it and explains
-   that the amount exceeds the outstanding balance.
+1. **AC-008** **Given** a submitted expense awaiting review, **When** an authorized reviewer approves it under the group's approval policy, **Then** its status becomes approved and it is included in balances.
+2. **AC-009** **Given** a submitted expense awaiting review, **When** an authorized reviewer rejects it, **Then** its status becomes rejected and it does not affect balances.
+3. **AC-010** **Given** a pending expense, **When** a member views group balances before approval, **Then** the pending expense is excluded.
+4. **AC-011** **Given** an expense already resolved under the approval policy, **When** a reviewer attempts to resolve it again, **Then** the system prevents a duplicate or conflicting decision.
 
----
+### User Story 4 - Understand balances and record a payment (Priority: P1)
 
-### User Story 4 - Receive expense notifications (Priority: P2)
+A group member reviews what they owe or are owed by each other member and records a payment that settles all or part of a balance.
 
-A group member is notified when another member creates a group expense, so they can stay
-aware of new activity and review expenses when authorized.
+**Why this priority**: Accurate balances and settlement records are the primary practical outcome of expense sharing.
 
-**Why this priority**: Notifications make group activity visible and support timely review.
-
-**Independent Test**: Have one member submit an expense and verify that other members of
-that group receive a notification identifying the new expense without exposing it to
-non-members.
+**Independent Test**: Approve expenses involving at least two members, verify each pairwise balance, record a partial and a final payment, and verify the remaining balance after each payment.
 
 **Acceptance Scenarios**:
 
-1. **Given** a group with multiple members, **When** one member creates an expense,
-   **Then** the other group members are notified of the new expense.
-2. **Given** a person who is not a group member, **When** a group expense is created,
-   **Then** that person receives no notification or expense details.
+1. **AC-012** **Given** approved expenses involving multiple members, **When** a member opens group balances, **Then** the system shows the amount owed between each relevant pair of members.
+2. **AC-013** **Given** an outstanding balance, **When** the debtor records a full or partial payment to the creditor, **Then** it is pending confirmation and does not yet reduce the displayed balance.
+3. **AC-014** **Given** a payment amount greater than the outstanding amount, **When** the debtor attempts to record it against the balance owed to the creditor, **Then** the system prevents an invalid settlement and explains the amount available to settle.
+4. **AC-015** **Given** a pending or rejected expense, **When** balances are calculated, **Then** that expense does not increase any member's balance.
+5. **AC-030** **Given** a pending payment, **When** the payee confirms receipt, **Then** the payment becomes confirmed and the outstanding balance is reduced by its amount exactly once.
+6. **AC-031** **Given** a pending payment, **When** the payee rejects it, **Then** the payment is marked rejected and the outstanding balance remains unchanged.
 
----
+### User Story 5 - Receive expense notifications (Priority: P2)
 
-### User Story 5 - Review expense and payment reports (Priority: P2)
+A group member is notified when another member creates an expense in a group they belong to.
 
-A group member reviews summaries of expenses, balances, and payments, and can request a
-report for a specified date range and other available parameters.
+**Why this priority**: Timely notice lets members review activity and respond to expenses that require approval.
 
-**Why this priority**: Reports help members understand spending and verify settlement
-history over time.
-
-**Independent Test**: Enter known approved expenses and payments, request a report for a
-defined period, and compare the report totals and included records with the source entries.
+**Independent Test**: Create an expense as one member and verify that other members of the group receive a notification identifying the new expense without exposing it to non-members.
 
 **Acceptance Scenarios**:
 
-1. **Given** expenses and payments in a group, **When** a member requests a summary,
-   **Then** the summary reports expense, balance, and payment information consistent with
-   the underlying records.
-2. **Given** a valid date range and report parameters, **When** a member requests a custom
-   report, **Then** only matching records are included and the selected period is shown.
+1. **AC-016** **Given** a group with multiple active members, **When** one member submits an expense, **Then** every other active member receives an in-app notice identifying the new expense.
+2. **AC-017** **Given** a user outside the group, **When** an expense is submitted in that group, **Then** that user receives no notification and cannot access the expense.
+3. **AC-029** **Given** a submitted expense, **When** an authorized reviewer approves or rejects it, **Then** the submitter receives an in-app notice of the decision.
 
----
+### User Story 6 - Review expense, balance, and payment reports (Priority: P2)
+
+A member reviews summaries and requests a report for a chosen date range and relevant group or record filters.
+
+**Why this priority**: Reporting helps members understand spending and verify that balances and settlements are complete.
+
+**Independent Test**: Create expenses and payments on dates inside and outside a selected range, then verify the report includes only matching records and totals.
+
+**Acceptance Scenarios**:
+
+1. **AC-018** **Given** a member with group activity, **When** they open a summary, **Then** it shows expenses, balances, and payments they are authorized to view.
+2. **AC-019** **Given** a member selecting a date range and report filters, **When** they request a report, **Then** the results include matching records and correctly calculated totals and exclude records outside the range.
+3. **AC-020** **Given** a report with no matching records, **When** it is requested, **Then** the system presents an empty result without reporting misleading nonzero totals.
+
+### User Story 7 - Access SplitSmart on the required platforms (Priority: P1)
+
+A customer uses SplitSmart through its primary web experience and through applications that run on Android and iOS, with their authorized account and group information available on the supported clients.
+
+**Why this priority**: These platforms are explicitly part of the customer request and define the delivery target for the full product.
+
+**Independent Test**: Complete an account and group workflow on each required client and verify that authorized group data and actions are available consistently.
+
+**Acceptance Scenarios**:
+
+1. **AC-021** **Given** the full product is released, **When** a customer accesses it on the web, **Then** the web experience is the primary supported experience.
+2. **AC-022** **Given** the full product is released, **When** a customer uses an Android or iOS device, **Then** an application runs on that platform and supports the agreed customer workflows.
+3. **AC-023** **Given** a user changes an approved shared record on one supported client, **When** they access it from another supported client, **Then** the same authorized record and resulting balance are shown.
 
 ### Edge Cases
 
-- An expense amount is zero, negative, malformed, or has more precision than the supported
-  currency permits.
-- An expense includes a participant who is not an active member of its group, or the
-  submitter is not authorized to add an expense to that group.
-- Percentage shares are missing, negative, or do not total 100%; equal shares create a
-  rounding remainder.
-- An expense is rejected, edited, or submitted twice; it must not affect approved balances
-  more than once.
-- A reviewer tries to approve their own expense, or multiple reviewers act at nearly the
-  same time.
-- A group changes membership after an expense has been submitted or approved.
-- A payment is partial, duplicates an existing payment, exceeds the outstanding amount,
-  or is later corrected.
-- A payment above the current amount owed is rejected and does not change the balance or
-  payment history.
-- A report has an empty, reversed, or boundary date range.
-- An optional receipt is absent, unreadable, or not an accepted image type.
-- A user loses access or signs out while an action is in progress.
-- A notification delivery attempt fails; the expense’s saved status and balance outcome
-  remain explicit and correct.
+- Equal and percentage splits can produce fractional minor units; assign residual units by largest remainder and resolve ties by stable account ID.
+- Percentage values are outside 0–100% or do not sum to exactly 100%; reject the split.
+- An expense amount is zero, negative, or has greater fractional precision than the currency permits; reject the amount.
+- The payer is not included among the expense participants; this is allowed, and the payer is credited for the amount paid while participants owe their allocated shares. A participant who is not an active group member is invalid.
+- A receipt image is absent, unreadable, or cannot be attached.
+- A member is removed from a group after contributing to historical expenses; the removed member loses access, while historical records and balances remain attributed to them and reviewable by current authorized members.
+- A reviewer tries to approve their own expense, acts without authorization, or submits conflicting decisions; apply the group's approval policy and preserve the pending state when policy is unmet.
+- A payment is partial, duplicates a previously recorded payment, or exceeds the amount owed; pending and rejected payments must not reduce the balance.
+- A report's start date is after its end date, its range has no matching records, or records fall on either date boundary.
+- A member attempts to access another group's receipt, expense, report, or balance.
+
+## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: The system MUST allow each person to create an individual account using an
-  email address and password, sign in with those credentials, recover access through a
-  password recovery process, and access that account’s permitted expense and balance
-  information.
-  **Acceptance**: A person can register and sign in with a valid email address and
-  password, initiate password recovery, and retrieve only their own permitted
-  information; a different account cannot retrieve it without authorization.
-- **FR-002**: The system MUST allow authorized users to create and manage groups and their
-  memberships.
-  **Acceptance**: Group creation and membership changes are reflected in subsequent group
-  views, and non-members cannot access private group information.
-- **FR-003**: The system MUST allow an authorized group member to create an expense with
-  amount, date, description, payer, split method, and selected participants. The payer
-  MUST be recorded separately and MAY also be a participant. Every participant MUST be
-  an active member of the expense’s group when the expense is submitted.
-  **Acceptance**: A valid expense can be submitted with all required fields and distinct
-  payer and participant values when all participants are active group members; an
-  inactive or non-member participant, or an otherwise invalid or unauthorized submission,
-  is rejected with an actionable explanation.
-- **FR-004**: The system MUST allow an expense to include an optional receipt image.
-  **Acceptance**: An expense can be saved both with and without an accepted image; an
-  invalid image is not silently treated as an attached receipt.
-- **FR-005**: The system MUST support equal expense splits among selected participants.
-  **Acceptance**: Each participant’s share is equal to the extent allowed by the currency’s
-  minor units; leftover cents are assigned one at a time in the participant order recorded
-  on the expense until no remainder remains.
-- **FR-006**: The system MUST support percentage expense splits among selected
-  participants.
-  **Acceptance**: A split with non-negative percentages totaling exactly 100% is accepted;
-  other percentage totals are rejected; calculated shares reconcile to the expense amount.
-- **FR-007**: The system MUST provide a group-configured approval process for submitted
-  expenses before they are included in balances.
-  **Acceptance**: A pending expense does not affect balances; only an expense approved by
-  the configured reviewer process affects balances; a rejected expense does not.
-- **FR-008**: The system MUST retain and show each expense’s review status and decision
-  history to users authorized to view it.
-  **Acceptance**: Submitters and authorized reviewers can distinguish pending, approved,
-  and rejected expenses and see the applicable decision.
-- **FR-009**: The system MUST notify group members when another group member creates a new
-  expense.
-  **Acceptance**: Other members receive a notification associated with the group and
-  expense; non-members receive no group expense notification.
-- **FR-010**: The system MUST track the balance owed by each user to every other relevant
-  user based on approved expense shares, the recorded payer for each expense, and recorded
-  payments.
-  **Acceptance**: For a controlled set of expenses and payments, displayed pairwise
-  balances credit the recorded payer for the amount paid and equal the independently
-  calculated net obligations.
-- **FR-011**: The system MUST allow users to record payments made to settle balances,
-  including payer, recipient, amount, and date.
-  **Acceptance**: A valid payment not exceeding the outstanding amount appears in payment
-  history and reduces the applicable outstanding balance exactly once; a payment above the
-  outstanding amount is rejected without changing the balance or payment history.
-- **FR-012**: The system MUST provide summaries of users’ expenses, balances, and
-  payments.
-  **Acceptance**: Summary totals reconcile with the authorized underlying records.
-- **FR-013**: The system MUST allow users to request reports using a specified date range
-  and other available report parameters.
-  **Acceptance**: The generated report states its parameters and includes only records
-  matching them.
-- **FR-014**: The complete product MUST be available primarily through the web and also
-  through applications that run on Android and iOS.
-  **Acceptance**: A user can access the required account, group, expense, approval,
-  balance, payment, notification, and reporting capabilities through the web and through
-  supported Android and iOS applications.
-- **FR-015**: The system MUST preserve historical expense and payment records when a
-  group’s membership changes.
-  **Acceptance**: A membership change does not silently rewrite or remove previously
-  recorded transactions; access to historical records follows the group’s disclosed
-  access policy.
+- **FR-001**: System MUST allow each person to register and sign in with a verified email address and password to access their own expense and balance information. (CR-001)
+- **FR-002**: System MUST allow authorized members to create groups, invite people, add invitees to membership only after invitation acceptance, and remove members. (CR-002)
+- **FR-003**: System MUST restrict group expenses, receipts, balances, reports, and notifications to the account owner and active members of the relevant group. Removing a member MUST revoke their group access while preserving their attribution on historical records visible to current authorized members. (CR-001, CR-002)
+- **FR-004**: System MUST allow an authorized member to submit an expense with amount, date, description, payer, split method, and the participating users. The payer MAY be outside the participant set; the payer MUST be credited for the full amount paid, with any payer allocation offsetting that credit. (CR-003)
+- **FR-005**: System MUST support equal and percentage-based expense allocations. Expense amounts MUST be positive and MUST NOT exceed the active currency's permitted precision. Each percentage MUST be between 0% and 100%, inclusive, and percentages MUST total exactly 100%. The system MUST allocate fractional minor units by the largest-remainder method, breaking ties by stable account ID, so participant allocations equal the expense amount. (CR-003)
+- **FR-006**: System MUST allow an expense submitter to attach an optional receipt image and associate it with the expense. (CR-003)
+- **FR-007**: System MUST keep submitted expenses pending review until the group's approval policy is satisfied; pending expenses MUST NOT affect balances. (CR-005)
+- **FR-008**: System MUST allow authorized reviewers to approve or reject an expense and record its status and decision; only approved expenses MUST affect balances. (CR-005, CR-006)
+- **FR-009**: System MUST send an in-app notice to every other active member of the relevant group when an expense is submitted, and MUST send the submitter an in-app notice when the expense is approved or rejected. (CR-004)
+- **FR-010**: System MUST calculate and display amounts owed between each relevant pair of users from approved expenses and confirmed payments. For each approved expense, the payer receives credit for the amount paid and each participant incurs their allocation as an amount owed; a participating payer's allocation offsets their credit. (CR-006, CR-007)
+- **FR-011**: System MUST allow a debtor to record a full or partial payment against an outstanding balance as pending. The creditor MUST be able to confirm or reject it; only a confirmed payment MUST reduce the balance, and a rejected payment MUST leave the balance unchanged. (CR-007)
+- **FR-012**: System MUST provide summaries of expenses, balances, and payments to authorized users. (CR-008)
+- **FR-013**: System MUST allow authorized users to request reports using a date range and supported report parameters, including group and member filters. (CR-008)
+- **FR-014**: The full product MUST provide a primarily web-based experience and applications that run on Android and iOS. (CR-009)
+
+### Customer Requirements Inventory
+
+These IDs preserve the customer's original scope independently of implementation decisions.
+
+| ID | Customer requirement from `UserRequirement.md` | Addressed by | Verified by |
+| --- | --- | --- | --- |
+| CR-001 | Each person has an account and can access their own expense and balance information. | FR-001, FR-003 | AC-001, AC-003 |
+| CR-002 | Users can create and manage groups of people. | FR-002, FR-003 | AC-002, AC-003, AC-026 |
+| CR-003 | Users can create expenses with amount, date, description, equal or percentage split, optional receipt image, and involved users. | FR-004, FR-005, FR-006 | AC-004 through AC-007, AC-024, AC-025, AC-027, AC-028 |
+| CR-004 | Group members are notified when another member creates an expense. | FR-009 | AC-016, AC-017, AC-029 |
+| CR-005 | Expenses are reviewed and approved before entering the system and changing balances; groups may need one or multiple approval levels. | FR-007, FR-008 | AC-008 through AC-011 |
+| CR-006 | The system tracks what each user owes each other user based on entered expenses. | FR-008, FR-010 | AC-008, AC-012, AC-015 |
+| CR-007 | Users can record payments to settle balances. | FR-010, FR-011 | AC-013, AC-014, AC-030, AC-031 |
+| CR-008 | Users receive expense, balance, and payment summaries and can request custom reports, including date ranges and other parameters. | FR-012, FR-013 | AC-018 through AC-020 |
+| CR-009 | The product is primarily web-based and also has applications that run on Android and iOS. | FR-014 | AC-021 through AC-023 |
 
 ### Non-Functional Requirements
 
-- **NFR-001**: The system MUST prevent access to account and group data by users who are
-  not authorized to view it.
-  **Acceptance**: Access-control tests covering own-account, group-member, and non-member
-  views produce no unauthorized expense, balance, receipt, or payment data.
-- **NFR-002**: The system MUST maintain monetary accuracy for supported currencies.
-  **Acceptance**: For all supported test cases, shares, balances, and payments reconcile
-  to the corresponding transaction totals at the currency’s declared precision.
-- **NFR-003**: The system MUST make expense status and balance effects understandable to
-  users.
-  **Acceptance**: In usability testing, users can correctly identify whether a submitted
-  expense is pending, approved, or rejected and whether it affects their balance.
-- **NFR-004**: The system MUST provide consistent results when the same transaction is
-  viewed by different authorized group members.
-  **Acceptance**: Concurrent views of an unchanged group transaction show the same status,
-  participants, shares, and balance effects.
-- **NFR-005**: The system MUST provide a user-visible confirmation or actionable error
-  after each account, group, expense, review, payment, or report action.
-  **Acceptance**: Each tested action ends with an explicit success result or an actionable
-  failure; no failed action is presented as successful.
-- **NFR-006**: The system MUST offer the complete product capability set across the
-  customer-requested web, Android, and iOS channels.
-  **Acceptance**: Cross-channel verification confirms that each required capability in
-  FR-001 through FR-013 is available through all three requested channels.
+- **NFR-001**: System MUST prevent an account from accessing another user's private information or group data without group authorization.
+- **NFR-002**: Monetary allocations, balances, and payment totals MUST reconcile exactly to the currency's minor unit; fractional allocations MUST use the largest-remainder method with stable account ID as the tie-breaker.
+- **NFR-003**: For a usability evaluation with at least 10 first-time participants, at least 9 MUST complete account setup, join or create a group, and submit an expense without facilitator assistance.
+- **NFR-004**: For a group with up to 10,000 historical expense and payment records, at least 95% of balance and report views MUST be available to the user within 5 seconds under the agreed test conditions.
+- **NFR-005**: Receipt images and financial records MUST be visible only to their owner and authorized group members, and user-facing failures MUST not expose another user's information.
+- **NFR-006**: A full-product release MUST provide the customer workflows defined by this specification on the primary web experience and on both Android and iOS applications.
 
-### Key Entities
+### Key Entities *(include if data involved)*
 
-- **Account**: A person’s individual identity, unique email address, password-based sign-in
-  credentials, and access to their own information.
-- **Group**: A shared context with members, expenses, and an approval process.
-- **Membership**: A person’s participation and permissions within a group.
-- **Expense**: A shared cost with amount, date, description, submitter, a separately
-  recorded payer, participants, split method, shares, optional receipt, and review status.
-- **Expense share**: A participant’s portion of an expense, determined equally or by
-  percentage.
-- **Review decision**: An approval or rejection of an expense by an authorized reviewer.
-- **Notification**: An alert to a group member about a newly created expense.
-- **Balance**: A user’s net amount owed to or by another user based on approved expense
-  shares, recorded payers, and recorded payments.
-- **Payment**: A dated transfer recorded between a payer and recipient to settle a
-  balance.
-- **Report**: A summary or filtered view of expenses, balances, and payments.
-
-### Requirements Inventory
-
-The following inventory preserves the original customer-requested feature set. The FR
-references are the testable specification of each item.
-
-| Original customer feature | Requirement references |
-|---|---|
-| Individual user accounts, login, and access to own expense and balance information | FR-001 |
-| Create and manage groups of people | FR-002 |
-| Create expenses with amount, date, description, and equal or percentage splits | FR-003, FR-005, FR-006 |
-| Attach an optional receipt image | FR-004 |
-| Specify users involved in each expense and adjust appropriate balances | FR-003, FR-010 |
-| Notify users when other group members create an expense | FR-009 |
-| Review and approve expenses before balance adjustments, with a group-appropriate approval process | FR-007, FR-008 |
-| Track balances owed between users across entered expenses | FR-010 |
-| Record payments to settle balances | FR-011 |
-| Provide expense, balance, and payment reports, including date ranges and parameters | FR-012, FR-013 |
-| Primary web product and applications runnable on Android and iOS | FR-014, NFR-006 |
-
-### Java Swing MVP Subset (Implementation Decision; Not Full Customer Scope)
-
-The following is a separately labeled implementation subset for a Java Swing MVP or
-prototype. It does not redefine or satisfy the complete customer product scope. The
-customer explicitly requires web, Android, and iOS delivery; a Swing-only application is
-not a substitute for those channels.
-
-- Account access and basic group creation and membership management (FR-001, FR-002).
-- Expense entry with amount, date, description, participants, equal or percentage split,
-  recorded payer, and optional receipt (FR-003 through FR-006).
-- A single group-configured review step, with pending, approved, and rejected states
-  (FR-007, FR-008).
-- In-application notification of new group expenses (FR-009).
-- Pairwise balance display and payment recording (FR-010, FR-011).
-- Basic summaries and date-range reports (FR-012, FR-013).
-
-This subset is a scope label only. It does not decide persistence, password recovery
-verification, image limits, currencies, or how the separate web and mobile applications
-will be delivered.
+- **Account**: A person and their private access to SplitSmart.
+- **Group**: A shared expense context created and managed by members.
+- **Membership**: A person's membership and authorization within a group.
+- **Expense**: A proposed or approved shared charge, including amount, date, description, payer, participants, split method, allocations, optional receipt, and review status.
+- **Allocation**: A participant's share of an expense under the selected split method.
+- **Approval Decision**: A reviewer's decision and the resulting expense status under a group's approval policy.
+- **Notification**: In-app notice to active group members about an expense submission, or to its submitter about an approval decision.
+- **Payment**: A manually recorded full or partial transfer between a debtor and creditor; it remains pending until confirmed or rejected by the creditor, and only confirmation reduces the outstanding balance.
+- **Report**: A requested summary of authorized expenses, balances, and payments for selected parameters and a date range.
 
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
 
-- **SC-001**: In acceptance tests, 100% of valid equal-split expenses reconcile to the
-  submitted amount after applying the disclosed currency-rounding rule.
-- **SC-002**: In acceptance tests, 100% of valid percentage splits total 100% and their
-  calculated shares reconcile to the expense amount; invalid totals are rejected.
-- **SC-003**: In approval tests, 100% of pending and rejected expenses produce no balance
-  adjustment, and each approved expense adjusts balances exactly once.
-- **SC-004**: For every controlled test dataset, pairwise balances reconcile to approved
-  expense shares, the recorded payer for each expense, and recorded payments.
-- **SC-005**: In notification tests, all other group members receive a new-expense
-  notification and no non-member receives the expense details.
-- **SC-006**: At least 90% of representative users in acceptance testing complete account
-  access, group expense submission and review, balance inspection, and payment recording
-  on their first attempt without assistance.
-- **SC-007**: The accepted product provides the complete feature set on web, Android, and
-  iOS; a Swing-only MVP does not meet this criterion.
-- **SC-008**: In report tests, every generated summary and date-filtered report reconciles
-  to the authorized source transactions and stated report parameters.
+- **SC-001**: All acceptance tests for equal and percentage splits reconcile participant allocations to the expense total with no minor-unit discrepancy.
+- **SC-002**: At least 9 of 10 first-time usability participants complete account setup, join or create a group, and submit an expense without help.
+- **SC-003**: At least 95% of balance and report views for 10,000 historical records are available within 5 seconds under the agreed test conditions.
+- **SC-004**: In all approval and settlement workflow tests, pending and rejected expenses cause zero balance change, approved expenses update affected balances exactly once, and only confirmed payments reduce outstanding balances.
+- **SC-005**: At least 9 of 10 usability participants can identify a selected group's current pairwise balances and payment history within 60 seconds.
+- **SC-006**: A full-product release passes the account, group, expense, balance, and payment acceptance scenarios on the primary web experience and on Android and iOS.
+- **SC-007**: At least 8 of 10 usability participants rate the expense, approval, and settlement history as understandable at 4 or higher on a 5-point scale.
 
 ## Assumptions
 
-- The MVP approval process uses one authorized reviewer unless a group chooses a different
-  supported approval configuration; the customer allows either single or multiple review.
-- A pending or rejected expense does not affect balances. An approved expense is included
-  once, regardless of repeated review actions.
-- The supported currency list and each currency’s minor-unit precision remain to be
-  selected. Equal-split leftover cents are assigned one at a time in the expense’s
-  participant order.
-- Percentage shares must be non-negative and total 100%; invalid totals are rejected.
-- Group organizers can manage membership and configure approval; group members can submit
-  expenses. Exact permissions remain subject to product policy.
-- Only active group members can be selected as expense participants. Historical
-  transactions remain preserved when membership changes; their access follows the
-  group’s disclosed access policy.
-- Notifications in the MVP may be in-application notifications; the customer has not
-  specified delivery channels.
-- The Java Swing MVP is a subset/prototype and does not replace the required primary web
-  product or Android and iOS applications.
-- The account sign-in method is email and password with password recovery; the recovery
-  verification steps are not specified.
-- The specification does not assume a particular storage model, receipt format or size
-  limit, or report export format.
+- Each expense uses one currency; conversion between currencies is outside the stated customer scope.
+- A submitted expense has one payer. A payment is a manually recorded settlement, not a transfer initiated by SplitSmart.
+- In-app notification is the only specified channel; email, SMS, and push delivery are out of scope unless selected later.
+- Report parameters include group, member, record type, and date range; additional custom dimensions are not assumed.
+- The Java Swing MVP is an implementation subset for desktop evaluation. It does not satisfy the separate customer requirement for a primary web product and Android/iOS applications.
+- Performance criteria will be measured on test conditions agreed before verification; no production traffic or availability target was provided.
+
+## Implementation Decisions (Separate from Customer Requirements)
+
+### Java Swing MVP Subset
+
+- **MVP-001**: The initial desktop MVP uses Java 21, Maven, and Java Swing.
+- **MVP-002**: The Swing MVP subset covers account and group workflows, expense submission, review and approval, notifications, balances, payment recording, and reports.
+- **MVP-003**: Java business rules are separated from Swing presentation and event handling; money calculations use `BigDecimal`; automated Java tests use JUnit 5; maintained architecture and interaction diagrams use PlantUML.
+- **MVP-004**: AI-generated work is reviewed and verified by a human before acceptance.
+
+These are implementation decisions governed by the project constitution, not customer-originated requirements. A Swing-only MVP MUST NOT be presented as delivery of CR-009. The product-level platform decision remains subject to customer confirmation.
 
 ## Open Questions
 
-These questions do not remove or narrow any original customer feature. Defaults above
-allow planning to proceed; answers may refine the acceptance criteria.
-
-1. Which currencies and currency precision rules must be supported, and what amount
-   formats and precision should be accepted or rejected?
-2. Which group roles may approve expenses, and can submitters approve their own expenses?
-   Are multi-level or quorum approvals required for any groups?
-3. Which notification channels are required beyond in-application notifications (for
-   example, email or mobile push), and are user preferences needed?
-4. What receipt image formats and size limits are acceptable, and who can view receipts
-   after a person leaves a group?
-5. Which report parameters and output formats are required beyond date range, and should
-   users be able to export reports?
-6. What behavior is intended for payment corrections and expenses changed after
-   submission or approval?
-7. Which verification steps and safeguards are required for password recovery?
-8. What release boundary is intended for the Java Swing MVP relative to the complete web,
-   Android, and iOS product?
+1. **Platform rollout**: Is the Java Swing MVP a desktop prototype before the required primary web, Android, and iOS clients, or is desktop itself an additional supported client? Which release must deliver each customer-required platform?
+2. **Approval policy**: Should groups choose a single reviewer or multiple reviewers, and may an expense submitter approve their own expense? The default assumption is one designated reviewer and no self-approval.

@@ -1,83 +1,114 @@
 <!--
 Sync Impact Report
-Version change: unversioned scaffold → 1.0.0
-Modified principles: None (initial adoption)
-Added principles: I. Customer Requirements and Traceability; II. Java 21 and Maven; III. Object-Oriented Design and Swing Separation; IV. Exact Monetary Arithmetic; V. Automated Verification, Architecture Diagrams, and Human Review
-Added sections: Customer Requirements and Implementation Decisions; Engineering Workflow
+Version change: Unversioned scaffold -> 1.0.0 (initial constitution)
+Modified principle slots:
+- PRINCIPLE_1_NAME -> I. Java 21 Baseline
+- PRINCIPLE_2_NAME -> II. Maven Build
+- PRINCIPLE_3_NAME -> III. Java Swing Interface
+- PRINCIPLE_4_NAME -> IV. JUnit 5 Verification
+- PRINCIPLE_5_NAME -> V. PlantUML as Diagram Source
+Added principles: VI. Object-Oriented Design; VII. GUI and Business Logic Separation;
+VIII. Exact Monetary Arithmetic; IX. Customer Requirement Traceability;
+X. Human Review of AI Output
+Added sections: Architecture and Technology Constraints; Delivery and Review Controls
 Removed sections: None
-Follow-up TODOs: Confirm the original ratification date; the source project does not record it.
+Follow-up TODO: Record the original ratification date.
 -->
 # SplitSmart Constitution
 
 ## Core Principles
 
-### I. Customer Requirements and Traceability
-The customer request in `UserRequirement.md` is authoritative for product behavior and
-delivery scope. Every approved customer requirement MUST have a stable identifier and be
-traceable to its design decisions and verification tests. Updates to requirements MUST
-preserve or revise those links. Implementation choices MUST be identified as such and MUST
-NOT be represented as customer requirements.
+### I. Java 21 Baseline
+Production Java code MUST target Java 21. Use Java language and runtime features
+supported by that baseline, and document any compatibility exception before
+adopting it. A common runtime baseline keeps builds and behavior reproducible.
 
-### II. Java 21 and Maven
-Project code MUST target Java 21, and Maven MUST be the authoritative build, dependency,
-and test lifecycle. Changes to the Java version or build system require an approved
-constitution amendment or a documented, approved exception.
+### II. Maven Build
+Maven MUST be the canonical build and dependency-management system for Java
+modules. Project builds MUST declare required dependencies and plugins, use
+repeatable lifecycle goals, and avoid relying on undeclared local machine state.
 
-### III. Object-Oriented Design and Swing Separation
-The application MUST use object-oriented design to keep responsibilities cohesive and
-business invariants explicit. Java Swing MUST be confined to presentation and interaction;
-business rules and calculations MUST reside in components that do not depend on Swing.
-The GUI MUST invoke those components rather than implementing domain behavior in event
-handlers. This separation keeps core behavior independently testable and protects it from
-presentation changes.
+### III. Java Swing Interface
+Desktop graphical interfaces implemented for this project MUST use Java Swing.
+Swing event handlers MUST delegate work rather than own domain rules. Swing is a
+desktop implementation choice and MUST NOT be represented as satisfying web,
+Android, or iOS customer requirements by itself.
 
-### IV. Exact Monetary Arithmetic
-All monetary amounts and monetary calculations MUST use `BigDecimal`. Floating-point
-types MUST NOT be used for money. Scale and rounding MUST be explicit at defined business
-boundaries, consistently applied, and consistent with approved requirements.
+### IV. JUnit 5 Verification
+Automated Java tests MUST use JUnit 5. Tests MUST cover material business rules,
+including expense splitting, approvals, balance changes, and payment settlement;
+test results MUST be reproducible through the Maven build.
 
-### V. Automated Verification, Architecture Diagrams, and Human Review
-Automated tests MUST use JUnit 5. Tests MUST verify business behavior and the requirement
-traceability they cover. PlantUML diagrams MUST be updated when a change affects documented
-architecture or important component interactions. AI-generated code, tests, diagrams, and
-documentation MUST receive human review for correctness, requirement alignment, and
-consistency before acceptance; AI output is not authoritative.
+### V. PlantUML as Diagram Source
+Architecture and interaction diagrams maintained for the project MUST use
+PlantUML source. Diagrams that describe current design MUST be updated when a
+relevant design change is accepted, so the source remains reviewable alongside
+the implementation decisions it records.
 
-## Customer Requirements and Implementation Decisions
+### VI. Object-Oriented Design
+Java code MUST assign behavior to cohesive objects with explicit responsibilities.
+Types MUST encapsulate their state and expose operations through meaningful
+interfaces; inheritance MUST be used only when substitutability is valid.
 
-The customer request specifies accounts, groups, shared expenses (including equal or
-percentage splits and optional receipts), notifications, expense approval, balances,
-payment tracking, reporting, and web delivery with Android and iOS apps. These remain
-customer requirements unless changed through an approved customer-facing requirements
-process.
+### VII. GUI and Business Logic Separation
+Business rules MUST reside outside Swing components and event handlers in
+testable application or domain components. GUI code MAY format input and present
+results, but MUST call application operations for validation and state changes.
+This boundary allows domain behavior to be tested without launching the GUI.
 
-Java 21, Maven, Java Swing, JUnit 5, PlantUML, and `BigDecimal` are implementation decisions
-and engineering constraints, not customer requirements. In particular, a Swing interface
-MUST NOT be treated as satisfying the requested web, Android, or iOS delivery scope.
-Any mismatch between an implementation choice and customer scope MUST be made explicit
-and resolved through the requirements process before the product is represented as meeting
-that scope.
+### VIII. Exact Monetary Arithmetic
+Money values and calculations MUST use `BigDecimal`, never binary floating-point
+types. Currency scale and rounding rules MUST be explicit at calculation or
+presentation boundaries and covered by tests, preventing silent balance drift.
 
-## Engineering Workflow
+### IX. Customer Requirement Traceability
+Customer requirements MUST remain distinguishable from implementation decisions.
+Specifications and plans MUST identify customer-originated outcomes separately
+from selected technologies, architecture, and design choices, and trace each
+customer requirement to the design and verification that address it. An
+implementation decision MUST NOT silently narrow, replace, or claim completion
+of a customer requirement.
 
-Changes MUST identify the requirements they address and the tests that verify them.
-JUnit 5 tests MUST be run for affected behavior before acceptance, and the Maven build
-MUST succeed. Reviewers MUST check requirement traceability, separation of GUI and
-business logic, correct monetary arithmetic, and relevant PlantUML updates. Human review
-of AI-assisted work is mandatory under Principle V.
+### X. Human Review of AI Output
+AI-generated code, tests, diagrams, and documentation MUST be reviewed and
+verified by a human before acceptance. Reviewers MUST check correctness,
+requirement alignment, security implications, and consistency with this
+constitution; generated output is a proposal, not evidence of correctness.
+
+## Architecture and Technology Constraints
+
+Java 21, Maven, and Swing are implementation constraints for the applicable
+Java desktop components. The customer request in `UserRequirement.md` separately
+requires a primarily web-based product and applications that run on Android and
+iOS. These are customer requirements, not superseded by the implementation
+constraints. Specifications and plans MUST show how each target is addressed;
+they MUST explicitly surface any unresolved platform or technology conflict for
+customer resolution rather than assume that a Swing desktop application meets
+web or mobile needs. This constitution does not authorize changing the customer
+request.
+
+## Delivery and Review Controls
+
+Before implementation, each feature specification MUST identify its customer
+requirements and any implementation decisions that constrain its design.
+Architecture and PlantUML diagrams MUST reflect approved decisions. Maven CI or
+the documented equivalent MUST run the JUnit 5 suite for changes to Java code.
+Review MUST verify requirement traceability, monetary arithmetic, GUI/domain
+separation, and human validation of AI-assisted contributions as applicable.
 
 ## Governance
 
-This constitution governs project decisions and supersedes conflicting local practices.
-Amendments MUST be reviewed and approved, update this document, and include a rationale
-and an impact assessment for affected requirements, designs, tests, and guidance.
-Constitution versions use semantic versioning: MAJOR for incompatible principle or
-governance changes, MINOR for new principles or materially expanded requirements, and
-PATCH for clarifications and non-semantic refinements.
+This constitution governs project specifications, plans, implementation, and
+reviews. Amendments MUST be proposed with a rationale and impact assessment,
+approved by the project owner, and recorded in the constitution. Changes that
+remove or redefine a principle incompatibly require a MAJOR version increment;
+new principles or materially expanded guidance require MINOR; clarifications
+and non-semantic corrections require PATCH. Versions use `MAJOR.MINOR.PATCH`.
 
-Every change and review MUST assess compliance with this constitution. Any exception MUST
-be documented with its scope, rationale, approver, and duration; temporary exceptions MUST
-be revisited before expiration. AI-generated material is subject to the same review and
-approval requirements as other project changes.
+Feature reviews MUST assess compliance with applicable principles and document
+any approved exception, its rationale, and its scope. Unresolved conflict with a
+customer requirement MUST be raised for customer decision; it MUST NOT be
+resolved by silently weakening that requirement. The constitution takes
+precedence over lower-level project guidance until formally amended.
 
-**Version**: 1.0.0 | **Ratified**: TODO(RATIFICATION_DATE): Original adoption date unknown | **Last Amended**: 2026-11-05
+**Version**: 1.0.0 | **Ratified**: TODO(RATIFICATION_DATE): original date not recorded | **Last Amended**: 2026-10-29
